@@ -1,28 +1,44 @@
-import httpx
+import requests
+from src.url import base_url_1
 
 
-class ApiClient:
+class APIClient:
     def __init__(self, base_url: str):
-        self._client = httpx.AsyncClient(
-            base_url=base_url,
-            timeout=10.0,
+        self.base_url = base_url
+        self._session = None
+
+    @property
+    def session(self):
+        """Публичный геттер для сессии"""
+        if self._session is None:
+            self._session = requests.Session()
+        return self._session
+
+    def get(self, endpoint: str):
+        """Публичный метод — основной интерфейс"""
+        url = f"{self.base_url}{endpoint}"
+        response = self.session.get(url)
+        return response.json()
+
+    def __log_request(self, url: str):
+        """Приватный метод — детали реализации"""
+        print(f"Запрос к {url}")
+
+    def post(self, endpoint: str, json: dict):
+        url = f"{self.base_url}/{endpoint.lstrip('/')}"
+        self.__log_request(url)
+
+        response = self.session.post(
+            url,
+            json=json,
+            timeout=10
         )
+        response.raise_for_status()
 
-    async def get(self, endpoint: str) -> httpx.Response:
-        return await self._client.get(endpoint)
+        return response.json()
 
-    async def post(
-        self,
-        endpoint: str,
-        data: dict,
-    ) -> httpx.Response:
-        return await self._client.post(endpoint, json=data)
 
-    async def close(self) -> None:
-        await self._client.aclose()
+client = APIClient(base_url_1)
 
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, exc_type, exc_value, traceback):
-        await self.close()
+print(client.base_url)
+data = client.get("/posts/1")
