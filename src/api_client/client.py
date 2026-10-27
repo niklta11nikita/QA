@@ -1,5 +1,5 @@
 import requests
-from src.url import base_url_1
+from src.api_client.models import PostResponse, PostRequest
 
 
 class APIClient:
@@ -14,31 +14,25 @@ class APIClient:
             self._session = requests.Session()
         return self._session
 
-    def get(self, endpoint: str):
-        """Публичный метод — основной интерфейс"""
-        url = f"{self.base_url}{endpoint}"
-        response = self.session.get(url)
-        return response.json()
+    def get(self, endpoint: str) -> PostResponse:
+        url = f"{self.base_url}/{endpoint.lstrip('/')}"
+        self.__log_request(url)
+        response = self.session.get(url, timeout=10)
+        response.raise_for_status()
+        return PostResponse.model_validate(response.json())
 
     def __log_request(self, url: str):
         """Приватный метод — детали реализации"""
         print(f"Запрос к {url}")
 
-    def post(self, endpoint: str, json: dict):
+    def post(self, endpoint: str, request: PostRequest) -> PostResponse:
         url = f"{self.base_url}/{endpoint.lstrip('/')}"
         self.__log_request(url)
 
         response = self.session.post(
             url,
-            json=json,
+            json=request.model_dump(),
             timeout=10
         )
         response.raise_for_status()
-
-        return response.json()
-
-
-client = APIClient(base_url_1)
-
-print(client.base_url)
-data = client.get("/posts/1")
+        return PostResponse.model_validate(response.json())
